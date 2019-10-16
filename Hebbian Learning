@@ -48,7 +48,6 @@ prec=1e-30
 gamma0=0.002 #Strength of Inhibitory connection
 
 # 4. Hebbian Learning (Oja's Rule)
-#다른 논문에서는 <X,v>
 %matplotlib inline
 %matplotlib notebook
 fig=plt.figure(figsize=(12,12))
@@ -63,79 +62,50 @@ print('y'+str(y[1:4,0]))
 for nep in range(Nep): #epoch
     print('epoch'+str(nep))
     eps = eps0*(1-nep/Nep) #learning rate decrease
-    gamma = gamma0*(1-nep/Nep)#########################################조절
+    gamma = gamma0*(1-nep/Nep)
     v = np.triu(np.random.uniform(-0.1, 0.1, size=(100,100)))
     np.fill_diagonal(v, 0.0)
     
     M=M[np.random.permutation(Ns),:]
     y_p = np.zeros((100, 100))
     
-    for i in range(170):  #minibatch 100, cycle 600Ns//Num
+    for i in range(Ns//Num):  #minibatch 100, cycle 600Ns//Num
         print('minibatch'+str(i))
-#         eps1 = eps*(1-nep/Nep) #learning rate decrease
         gamma1 = gamma*(1-i/200)#Ns//Num
         inputs = np.transpose(M[i*Num:(i+1)*Num,:]) #extract 100 image from M (784,100)
         
 #1.y    (Inhibitory connection 초기화 5번에 한번)
-#         if np.mod(i,5)==0:
-#         for _ in range(3):
         y = np.dot(synapses,inputs)+np.multiply(v,y_p)
 #                 #y (100,784)*(784,100) + (100,100) = (100,100)
-#         else:
-        for _ in range(3):
+        for _ in range(2):
             y = np.dot(synapses, inputs)+np.multiply(v,y)
+        print(y.shape)
+        y1=y
         y = np.mean(y, axis = 1)
-#         y/=np.absolute(np.mean(y)) 절대안됨
-#         y = y*10/np.absolute(np.amax(y))#변동 심함
-#         y /=np.linalg.norm(y)#절대안됨
-#         y =np.true_divide(y,np.amax(np.absolute(y)))#절대안됨
-
         y2 = y**2
-        #y (100,100) -> (100,1)
         print('y'+str(y[1:4]))
         
 #2.dW
         dw = eps*(np.multiply(np.tile(y.reshape(y.shape[0],1),(1,N)), inputs.T)- np.multiply(np.tile(y2.reshape(y.shape[0],1),(1,N)), synapses))
-#         dw /= np.absolute(np.mean(dw)) 절대안됨
-#         dw /=np.linalg.norm(dw)#너무느림, slow 변동, dw too small
-#         dw /=np.linalg.norm(dw,axis=0).reshape((1, 784))#수렴 후보
-#         dw =np.true_divide(dw,np.amax(np.absolute(dw)))#숫자변동 심함
+        dw /=np.linalg.norm(dw,axis=0).reshape((1, 784))#수렴 후보
         print('dw'+str(dw[1:4]))
 
-        #mean 을 취하지 않았음 eps 곱해지기 전 : normalize 시도해보기
         
 #3.dv   np.multiply(np.tile(y.reshape(y.shape[0],1),(1,N)), inputs.T)
-        dv = -1*gamma1*np.multiply(np.tile(y.reshape(100,1),(1,100)),np.tile(y.reshape(1,100),(100,1))) 
-        dv /=np.absolute(np.mean(dv))#절대안됨
+        dv = -1*gamma*np.multiply(np.tile(y.reshape(100,1),(1,100)),np.tile(y.reshape(1,100),(100,1))) 
         dv /=np.linalg.norm(dv)#숫자 계속 변동, 흰배경, 발산x
-        dv /=np.linalg.norm(dv,axis=0).reshape(1,100)#숫자 변동, 나중에는 수렴,느리다
-        dv =np.true_divide(dv,np.amax(np.absolute(dv)))#3,9모양이 많고 숫자 변동(진한 부분은 잘 변하진 않음, 변동을 하긴한다. 수렴x)
         v += dv
         print('dv'+str(dv[0:5,30]))
         print('v'+str(v[0:5,30]))
         v = 1/100*np.triu(v.T)
         np.fill_diagonal(v, 0.0)
-#         v =np.true_divide(v,np.amax(np.absolute(v)))
-#         v /=np.linalg.norm(v,axis=0).reshape(1,100)#숫자 변동, 나중에는 수렴,느리다
-        v/=np.linalg.norm(v)
-    
+
 #update synapse        
         nc=np.amax(np.absolute(dw))
-        if nc < prec:
-            nc = prec
         synapses += np.true_divide(dw,1)
         print('synapses'+str(synapses[10:20,0]))
         print('synapses'+str(synapses[10:20,24]))
-        for i in range(784):
-            for j in range(100):
-                if synapses[j,i] < -1:
-                    synapses[j,i] = -1
-        synapses =np.true_divide(synapses,np.amax(np.absolute(synapses)))#숫자 변동,갑자기 한개 남음
-#         synapses /= np.linalg.norm(synapses, axis=0).reshape((1, 784))#흰배경,가운데 동그랗게 됨,
-#         synapses /=np.absolute(np.mean(synapses)) 절대안됨
-
-#수의 변화를 제한하고 빨간색으로 출력되는 수를 더 잘 관찰할 의도로 적용했으나,
-#learning 과정에 많은 도움이 되었다. (relu와 같은 효과?)
+        synapses /= np.linalg.norm(synapses, axis=0).reshape((1, 784))#흰배경,가운데 동그랗게 됨,
 
 
         draw_weights(synapses, Kx, Ky)
